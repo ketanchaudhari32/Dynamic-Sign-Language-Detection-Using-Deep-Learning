@@ -1,3 +1,4 @@
+#import libraries
 import cv2
 import numpy as np
 import os
@@ -11,6 +12,7 @@ from spatio_temporal_conv import R2Plus1DClassifier
 mp_holistic = mp.solutions.holistic # Holistic model
 mp_drawing = mp.solutions.drawing_utils # Drawing utilities
 
+#mediapipe helper function to read each frame and provide features
 def mediapipe_detection(image, model):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # COLOR CONVERSION BGR 2 RGB
     image.flags.writeable = False                  # Image is no longer writeable
@@ -47,16 +49,18 @@ def draw_styled_landmarks(image, results):
                              mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
                              ) 
 
+#Extracting features for each keypoints
 def extract_keypoints(results):
     pose = np.array([[res.x, res.y, res.z] for res in results.pose_landmarks.landmark]) if results.pose_landmarks else np.zeros((33,3))
     face = np.array([[res.x, res.y, res.z] for res in results.face_landmarks.landmark]) if results.face_landmarks else np.zeros((468,3))
     lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]) if results.left_hand_landmarks else np.zeros((21,3))
     rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]) if results.right_hand_landmarks else np.zeros((21,3))
 
+    #padding zeros at end of array to make dimenion eqal to convert into square matrix
     feature_array = np.concatenate([pose, face, lh, rh, np.zeros((33,3))]) 
-    feature_array = feature_array.reshape((24,24,3))
+    feature_array = feature_array.reshape((24,24,3)) #reshapping into square matrix
 
-    return feature_array       
+    return feature_array    
 
 def prob_viz(res, actions, input_frame, colors):
     output_frame = input_frame.copy()
@@ -66,15 +70,16 @@ def prob_viz(res, actions, input_frame, colors):
         
     return output_frame                 
 
-
+#loading model for 10 classes
 num_classes = 10
 device = torch.device('cpu')
 model = R2Plus1DClassifier(num_classes=num_classes, layer_sizes=[2, 2, 2, 2])
-checkpoint = torch.load('./trained_model/spatio_tempo_model_old.pth',map_location=device)
+checkpoint = torch.load('./trained_model/spatio_tempo_model_{}_classes.pth'.format(num_classes),map_location=device)
 model.load_state_dict(checkpoint['state_dict'])
 
 actions = np.load('./class_{}_dataset/class_labels.npy'.format(num_classes))
 
+#setting colors for 10 classes
 colors = []
 for i in range(num_classes):
     colors.append((np.random.randint(0,255),np.random.randint(0,255),np.random.randint(0,255)))
@@ -96,7 +101,6 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
         # Make detections
         image, results = mediapipe_detection(frame, holistic)
 
-        
         # Draw landmarks
         draw_styled_landmarks(image, results)
         

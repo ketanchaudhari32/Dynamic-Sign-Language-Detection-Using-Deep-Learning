@@ -1,3 +1,5 @@
+#importing libraries
+
 import numpy as np
 import glob
 import os
@@ -6,23 +8,22 @@ from tqdm import tqdm
 import time
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
-
 import seaborn as sn
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 from spatio_temporal_conv import R2Plus1DClassifier
+import torch
+from torch import nn, optim
 
 num_classes = 10
 
 class_labels = np.load('./class_{}_dataset/class_labels.npy'.format(num_classes))
 
-# le = MultiLabelBinarizer()
-# tra = le.fit_transform(class_labels)
-# output_dim = tra.shape[1]
 label_map = {label:index for index,label in enumerate(class_labels)}
 label_map
 
+#loading training,testing and validation data
 X_train = []
 Y_train = []
 X_val = []
@@ -37,7 +38,6 @@ for file in glob.glob('./class_{}_features/*/*.npy'.format(num_classes)):
 
     data = np.load(file)
 
-
     # convert from [D, H, W, C] format to [C, D, H, W] (what PyTorch uses)
     # D = Depth (in this case, time), H = Height, W = Width, C = Channels
     data = data.transpose((3, 0, 1, 2))
@@ -45,7 +45,6 @@ for file in glob.glob('./class_{}_features/*/*.npy'.format(num_classes)):
 
     if split == 'train':
         X_train.append(data)
-        # Y_train.append(file_name)
         Y_train.append(label_map[file_name])
     if split == 'test':
         X_test.append(data)
@@ -129,6 +128,8 @@ if os.path.exists(model_path):
     # obtains the epoch the training is to resume from
     epoch_resume = checkpoint["epoch"]
 
+
+#training model
 train_loss = []
 train_accuracy = []
 val_loss = []
@@ -201,8 +202,7 @@ for epoch in tqdm(range(epoch_resume, num_epochs), unit="epochs", initial=epoch_
 time_elapsed = time.time() - start    
 print(f"Training complete in {time_elapsed//3600}h {(time_elapsed%3600)//60}m {time_elapsed %60 :.4}s")
 
-
-
+#printing and saving losses curve
 epochs = range(1,num_epochs+1)
 plt.plot(epochs, train_loss, 'g', label='Training loss')
 plt.plot(epochs, val_loss, 'b', label='validation loss')
@@ -210,10 +210,11 @@ plt.title('Training and Validation loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
+plt.savefig('./figures/train_val_losses_{}_class.png'.format(num_classes))
 plt.show()
-plt.savefig('/content/drive/MyDrive/Sign_language/figures/train_val_losses_{}_class.png'.format(num_classes))
 
 
+#testing model
 model = R2Plus1DClassifier(num_classes=num_classes, layer_sizes=[2, 2, 2, 2])
 
 checkpoint = torch.load(model_path)
@@ -259,28 +260,3 @@ print(f"{phase} Loss: {test_loss} Acc: {test_acc}")
 
 
 
-
-
-# https://openaccess.thecvf.com/content_CVPR_2019/papers/Xu_Spatiotemporal_CNN_for_Video_Object_Segmentation_CVPR_2019_paper.pdf
-
-y_true_new = []
-for i in y_true:
-    y_true_new = y_true_new + i 
-
-y_pred_new = []
-for i in y_pred:
-    y_pred_new = y_pred_new + i
-
-
-
-classes = [i for i,_ in OrderedDict(sorted(label_map.items(), key=lambda t: t[0])).items()]
-
-# Build confusion matrix
-cf_matrix = confusion_matrix(y_true_new, y_pred_new)
-
-df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix) * 10, index = [i for i in classes], columns = [i for i in classes])
-plt.figure(figsize = (12,7))
-sn.heatmap(df_cm, annot=True)
-# plt.savefig('output.png')
-
-#

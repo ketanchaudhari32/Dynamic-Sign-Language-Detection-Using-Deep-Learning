@@ -1,3 +1,4 @@
+#importing libraries
 import torch.nn as nn
 from torch.nn.modules.utils import _triple
 import torch
@@ -6,18 +7,6 @@ import math
 
 
 class SpatioTemporalConv(nn.Module):
-    r"""Applies a factored 3D convolution over an input signal composed of several input 
-    planes with distinct spatial and time axes, by performing a 2D convolution over the 
-    spatial axes to an intermediate subspace, followed by a 1D convolution over the time 
-    axis to produce the final output.
-    Args:
-        in_channels (int): Number of channels in the input tensor
-        out_channels (int): Number of channels produced by the convolution
-        kernel_size (int or tuple): Size of the convolving kernel
-        stride (int or tuple, optional): Stride of the convolution. Default: 1
-        padding (int or tuple, optional): Zero-padding added to the sides of the input during their respective convolutions. Default: 0
-        bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-    """
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, bias=True):
         super(SpatioTemporalConv, self).__init__()
@@ -159,16 +148,6 @@ class R2Plus1DNet(nn.Module):
         return x.view(-1, 512)
 
 class R2Plus1DClassifier(nn.Module):
-    r"""Forms a complete ResNet classifier producing vectors of size num_classes, by initializng 5 layers, 
-    with the number of blocks in each layer set by layer_sizes, and by performing a global average pool
-    at the end producing a 512-dimensional vector for each element in the batch, 
-    and passing them through a Linear layer.
-        
-        Args:
-            num_classes(int): Number of classes in the data
-            layer_sizes (tuple): An iterable containing the number of blocks in each layer
-            block_type (Module, optional): Type of block that is to be used to form the layers. Default: SpatioTemporalResBlock. 
-        """
     def __init__(self, num_classes, layer_sizes, block_type=SpatioTemporalResBlock):
         super(R2Plus1DClassifier, self).__init__()
 
